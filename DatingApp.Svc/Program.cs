@@ -1,5 +1,7 @@
+using DatingApp.Svc.Data;
 using DatingApp.Svc.Extensions;
 using DatingApp.Svc.Middleware;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,12 +20,6 @@ var app = builder.Build();
 
 app.UseMiddleware<ExceptionMiddleware>();
 
-if (app.Environment.IsDevelopment())
-{
-  app.UseSwagger();
-  app.UseSwaggerUI();
-}
-
 app.UseHttpsRedirection();
 
 app.UseCors(policy => policy.AllowAnyHeader().AllowAnyMethod().WithOrigins("https://localhost:4200"));
@@ -33,4 +29,21 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-app.Run();
+// Set up database seeding
+using var scope = app.Services.CreateScope();
+var services = scope.ServiceProvider;
+
+try
+{
+  var context = services.GetRequiredService<DatingDbContext>();
+
+  await context.Database.MigrateAsync();
+  await Seed.SeedUsers(context);
+}
+catch (Exception ex)
+{
+  var logger = services.GetRequiredService<ILogger<Program>>();
+  logger.LogError(ex, "An error occurred during migration");
+}
+
+await app.RunAsync();
