@@ -1,5 +1,6 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
+using AutoMapper;
 using DatingApp.Svc.Data;
 using DatingApp.Svc.DTOs;
 using DatingApp.Svc.Entities;
@@ -13,11 +14,13 @@ public class AccountController : BaseController
 {
   private readonly DatingDbContext context;
   private readonly ITokenService tokenService;
+  private readonly IMapper mapper;
 
-  public AccountController(DatingDbContext context, ITokenService tokenService)
+  public AccountController(DatingDbContext context, ITokenService tokenService, IMapper mapper)
   {
     this.context = context;
     this.tokenService = tokenService;
+    this.mapper = mapper;
   }
 
   [HttpPost("register")]
@@ -28,14 +31,13 @@ public class AccountController : BaseController
       return BadRequest("UserName is taken");
     }
 
+    var user = mapper.Map<AppUser>(register);
+
     using var hmac = new HMACSHA512();
 
-    var user = new AppUser
-    {
-      UserName = register.UserName.ToLower(),
-      PasswordHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(register.Password)),
-      PasswordSalt = hmac.Key
-    };
+    user.UserName = register.UserName.ToLower();
+    user.PasswordHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(register.Password));
+    user.PasswordSalt = hmac.Key;
 
     context.Users.Add(user);
     await context.SaveChangesAsync();
@@ -43,7 +45,8 @@ public class AccountController : BaseController
     return new UserDTO
     {
       UserName = user.UserName,
-      Token = tokenService.CreateToken(user)
+      Token = tokenService.CreateToken(user),
+      KnownAs = user.KnownAs
     };
   }
 
@@ -72,7 +75,8 @@ public class AccountController : BaseController
     {
       UserName = user.UserName,
       Token = tokenService.CreateToken(user),
-      PhotoUrl = user.Photos.FirstOrDefault(p => p.IsMain)?.Url
+      PhotoUrl = user.Photos.FirstOrDefault(p => p.IsMain)?.Url,
+      KnownAs = user.KnownAs
     };
   }
 
