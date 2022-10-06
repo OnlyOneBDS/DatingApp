@@ -17,6 +17,8 @@ public static class ApplicationServiceExtensions
     services.AddScoped<IPhotoService, PhotoService>();
     services.AddScoped<ITokenService, TokenService>();
 
+    services.AddScoped<LogUserActivity>();
+
     services.AddAutoMapper(typeof(AutoMapperProfiles).Assembly);
 
     services.AddDbContext<DatingDbContext>(options =>
