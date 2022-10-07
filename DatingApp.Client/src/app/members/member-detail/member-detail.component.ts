@@ -30,6 +30,8 @@ export class MemberDetailComponent implements OnInit {
         preview: false
       }
     ];
+
+    this.galleryImages = this.getImages();
   }
 
   loadMember() {
@@ -48,7 +50,7 @@ export class MemberDetailComponent implements OnInit {
 
     for (const photo of this.member.photos) {
       imageUrls.push({
-        smail: photo?.url,
+        small: photo?.url,
         medium: photo?.url,
         big: photo?.url
       });
