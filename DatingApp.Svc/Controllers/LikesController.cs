@@ -11,21 +11,18 @@ namespace DatingApp.Svc.Controllers;
 [Authorize]
 public class LikesController : BaseController
 {
-  private readonly IUserRepository userRepository;
-  private readonly ILikesRepository likesRepository;
+  private readonly IUnitOfWork unitOfWork;
 
-  public LikesController(IUserRepository userRepository, ILikesRepository likesRepository)
+  public LikesController(IUnitOfWork unitOfWork)
   {
-    this.userRepository = userRepository;
-    this.likesRepository = likesRepository;
+    this.unitOfWork = unitOfWork;
   }
-
 
   [HttpGet]
   public async Task<ActionResult<IEnumerable<LikeDTO>>> GetUserLikes([FromQuery] LikesParams likesParams)
   {
     likesParams.UserId = User.GetUserId();
-    var users = await likesRepository.GetUserLikes(likesParams);
+    var users = await unitOfWork.LikesRepository.GetUserLikes(likesParams);
 
     Response.AddPaginationHeader(users.CurrentPage, users.PageSize, users.TotalCount, users.TotalPages);
 
@@ -36,8 +33,8 @@ public class LikesController : BaseController
   public async Task<ActionResult> AddLike(string userName)
   {
     var sourceUserId = User.GetUserId();
-    var likedUser = await userRepository.GetUserByUserNameAsync(userName);
-    var sourceUser = await likesRepository.GetUserWithLikes(sourceUserId);
+    var likedUser = await unitOfWork.UserRepository.GetUserByUserNameAsync(userName);
+    var sourceUser = await unitOfWork.LikesRepository.GetUserWithLikes(sourceUserId);
 
     if (likedUser == null)
     {
@@ -49,7 +46,7 @@ public class LikesController : BaseController
       return BadRequest("You cannot like yourself");
     }
 
-    var userLike = await likesRepository.GetUserLike(sourceUserId, likedUser.Id);
+    var userLike = await unitOfWork.LikesRepository.GetUserLike(sourceUserId, likedUser.Id);
 
     if (userLike != null)
     {
@@ -64,7 +61,7 @@ public class LikesController : BaseController
 
     sourceUser.LikedUsers.Add(userLike);
 
-    if (await userRepository.SaveAllAsync())
+    if (await unitOfWork.Complete())
     {
       return Ok();
     }

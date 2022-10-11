@@ -12,14 +12,12 @@ namespace DatingApp.Svc.Controllers;
 [Authorize]
 public class MessagesController : BaseController
 {
-  private readonly IUserRepository userRepository;
-  private readonly IMessageRepository messageRepository;
+  private readonly IUnitOfWork unitOfWork;
   private readonly IMapper mapper;
 
-  public MessagesController(IUserRepository userRepository, IMessageRepository messageRepository, IMapper mapper)
+  public MessagesController(IUnitOfWork unitOfWork, IMapper mapper)
   {
-    this.userRepository = userRepository;
-    this.messageRepository = messageRepository;
+    this.unitOfWork = unitOfWork;
     this.mapper = mapper;
   }
 
@@ -28,21 +26,12 @@ public class MessagesController : BaseController
   {
     messageParams.UserName = User.GetUserName();
 
-    var messages = await messageRepository.GetMessagesForUser(messageParams);
+    var messages = await unitOfWork.MessageRepository.GetMessagesForUser(messageParams);
 
     Response.AddPaginationHeader(messages.CurrentPage, messages.PageSize, messages.TotalCount, messages.TotalPages);
 
     return messages;
   }
-
-  [HttpGet("thread/{userName}")]
-  public async Task<ActionResult<IEnumerable<MessageDTO>>> GetMessageThread(string userName)
-  {
-    var currentUserName = User.GetUserName();
-
-    return Ok(await messageRepository.GetMessageThread(currentUserName, userName));
-  }
-
 
   [HttpPost]
   public async Task<ActionResult<MessageDTO>> CreateMessage(CreateMessageDTO createMessageDTO)
@@ -54,8 +43,8 @@ public class MessagesController : BaseController
       return BadRequest("You cannot send messages to yourself");
     }
 
-    var sender = await userRepository.GetUserByUserNameAsync(userName);
-    var recipient = await userRepository.GetUserByUserNameAsync(createMessageDTO.RecipientUserName);
+    var sender = await unitOfWork.UserRepository.GetUserByUserNameAsync(userName);
+    var recipient = await unitOfWork.UserRepository.GetUserByUserNameAsync(createMessageDTO.RecipientUserName);
 
     if (recipient == null)
     {
@@ -71,9 +60,9 @@ public class MessagesController : BaseController
       Content = createMessageDTO.Content
     };
 
-    messageRepository.AddMessage(message);
+    unitOfWork.MessageRepository.AddMessage(message);
 
-    if (await messageRepository.SaveAllAsync())
+    if (await unitOfWork.Complete())
     {
       return Ok(mapper.Map<MessageDTO>(message));
     }
@@ -85,7 +74,7 @@ public class MessagesController : BaseController
   public async Task<ActionResult> DeleteMessage(int id)
   {
     var userName = User.GetUserName();
-    var message = await messageRepository.GetMessage(id);
+    var message = await unitOfWork.MessageRepository.GetMessage(id);
 
     if (message.Sender.UserName != userName && message.Recipient.UserName != userName)
     {
@@ -104,10 +93,10 @@ public class MessagesController : BaseController
 
     if (message.SenderDeleted && message.RecipientDeleted)
     {
-      messageRepository.DeleteMessage(message);
+      unitOfWork.MessageRepository.DeleteMessage(message);
     }
 
-    if (await messageRepository.SaveAllAsync())
+    if (await unitOfWork.Complete())
     {
       return Ok();
     }

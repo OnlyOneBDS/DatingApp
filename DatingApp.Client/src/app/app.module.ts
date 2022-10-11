@@ -32,6 +32,7 @@ import { RolesModalComponent } from './modals/roles-modal/roles-modal.component'
 import { SharedModule } from './modules/shared.module';
 import { NavComponent } from './nav/nav.component';
 import { RegisterComponent } from './register/register.component';
+import { ConfirmDialogComponent } from './modals/confirm-dialog/confirm-dialog.component';
 
 @NgModule({
   declarations: [
@@ -57,6 +58,7 @@ import { RegisterComponent } from './register/register.component';
     TextInputComponent,
     UserManagementComponent,
     HasRoleDirective,
+    ConfirmDialogComponent,
   ],
   imports: [
     AppRoutingModule,

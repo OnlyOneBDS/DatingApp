@@ -12,13 +12,13 @@ namespace DatingApp.Svc.Controllers;
 [Authorize]
 public class UsersController : BaseController
 {
-  private readonly IUserRepository userRepository;
+  private readonly IUnitOfWork unitOfWork;
   private readonly IMapper mapper;
   private readonly IPhotoService photoService;
 
-  public UsersController(IUserRepository userRepository, IMapper mapper, IPhotoService photoService)
+  public UsersController(IUnitOfWork unitOfWork, IMapper mapper, IPhotoService photoService)
   {
-    this.userRepository = userRepository;
+    this.unitOfWork = unitOfWork;
     this.mapper = mapper;
     this.photoService = photoService;
   }
@@ -26,15 +26,16 @@ public class UsersController : BaseController
   [HttpGet]
   public async Task<ActionResult<IEnumerable<MemberDTO>>> GetUsers([FromQuery] UserParams userParams)
   {
-    var user = await userRepository.GetUserByUserNameAsync(User.GetUserName());
+    var gender = await unitOfWork.UserRepository.GetUserGender(User.GetUserName());
+
     userParams.CurrentUserName = User.GetUserName();
 
     if (string.IsNullOrEmpty(userParams.Gender))
     {
-      userParams.Gender = user.Gender == "male" ? "female" : "male";
+      userParams.Gender = gender == "male" ? "female" : "male";
     }
 
-    var users = await userRepository.GetMembersAsync(userParams);
+    var users = await unitOfWork.UserRepository.GetMembersAsync(userParams);
 
     Response.AddPaginationHeader(users.CurrentPage, users.PageSize, users.TotalCount, users.TotalPages);
 
@@ -44,13 +45,13 @@ public class UsersController : BaseController
   [HttpGet("{userName}", Name = "GetUser")]
   public async Task<ActionResult<MemberDTO>> GetUser(string userName)
   {
-    return await userRepository.GetMemberAsync(userName);
+    return await unitOfWork.UserRepository.GetMemberAsync(userName);
   }
 
   [HttpPost("add-photo")]
   public async Task<ActionResult<PhotoDTO>> AddPhoto(IFormFile file)
   {
-    var user = await userRepository.GetUserByUserNameAsync(User.GetUserName());
+    var user = await unitOfWork.UserRepository.GetUserByUserNameAsync(User.GetUserName());
     var result = await photoService.AddPhotoAsync(file);
 
     if (result.Error != null)
@@ -71,7 +72,7 @@ public class UsersController : BaseController
 
     user.Photos.Add(photo);
 
-    if (await userRepository.SaveAllAsync())
+    if (await unitOfWork.Complete())
     {
       //return mapper.Map<PhotoDTO>(photo);
       //return CreatedAtRoute("GetUser", mapper.Map<PhotoDTO>(photo));
@@ -84,12 +85,12 @@ public class UsersController : BaseController
   [HttpPut]
   public async Task<ActionResult> UpdateUser(MemberUpdateDTO memberUpdate)
   {
-    var user = await userRepository.GetUserByUserNameAsync(User.GetUserName());
+    var user = await unitOfWork.UserRepository.GetUserByUserNameAsync(User.GetUserName());
 
     mapper.Map(memberUpdate, user);
-    userRepository.Update(user);
+    unitOfWork.UserRepository.Update(user);
 
-    if (await userRepository.SaveAllAsync())
+    if (await unitOfWork.Complete())
     {
       return NoContent();
     }
@@ -100,7 +101,7 @@ public class UsersController : BaseController
   [HttpPut("set-main-photo/{photoId}")]
   public async Task<ActionResult> SetMainPhoto(int photoId)
   {
-    var user = await userRepository.GetUserByUserNameAsync(User.GetUserName());
+    var user = await unitOfWork.UserRepository.GetUserByUserNameAsync(User.GetUserName());
     var photo = user.Photos.FirstOrDefault(p => p.Id == photoId);
 
     if (photo.IsMain)
@@ -117,7 +118,7 @@ public class UsersController : BaseController
 
     photo.IsMain = true;
 
-    if (await userRepository.SaveAllAsync())
+    if (await unitOfWork.Complete())
     {
       return NoContent();
     }
@@ -128,7 +129,7 @@ public class UsersController : BaseController
   [HttpDelete("delete-photo/{photoId}")]
   public async Task<ActionResult> DeletePhoto(int photoId)
   {
-    var user = await userRepository.GetUserByUserNameAsync(User.GetUserName());
+    var user = await unitOfWork.UserRepository.GetUserByUserNameAsync(User.GetUserName());
     var photo = user.Photos.FirstOrDefault(p => p.Id == photoId);
 
     if (photo == null)
@@ -153,7 +154,7 @@ public class UsersController : BaseController
 
     user.Photos.Remove(photo);
 
-    if (await userRepository.SaveAllAsync())
+    if (await unitOfWork.Complete())
     {
       return Ok();
     }
