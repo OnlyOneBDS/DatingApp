@@ -11,6 +11,8 @@ namespace DatingApp.Svc.Data
   {
     public DatingDbContext(DbContextOptions options) : base(options) { }
 
+    public DbSet<Connection> Connections { get; set; }
+    public DbSet<Group> Groups { get; set; }
     public DbSet<UserLike> Likes { get; set; }
     public DbSet<Message> Messages { get; set; }
 

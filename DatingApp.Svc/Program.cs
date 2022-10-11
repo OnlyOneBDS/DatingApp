@@ -2,6 +2,7 @@ using DatingApp.Svc.Data;
 using DatingApp.Svc.Entities;
 using DatingApp.Svc.Extensions;
 using DatingApp.Svc.Middleware;
+using DatingApp.Svc.SignalR;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,10 +13,7 @@ builder.Services.AddApplicationServices(builder.Configuration);
 builder.Services.AddControllers();
 builder.Services.AddCors();
 builder.Services.AddIdentityServices(builder.Configuration);
-
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSignalR();
 
 // Configure the HTTP request pipeline.
 var app = builder.Build();
@@ -24,12 +22,18 @@ app.UseMiddleware<ExceptionMiddleware>();
 
 app.UseHttpsRedirection();
 
-app.UseCors(policy => policy.AllowAnyHeader().AllowAnyMethod().WithOrigins("https://localhost:4200"));
+app.UseCors(policy =>
+  policy.AllowAnyHeader()
+    .AllowAnyMethod()
+    .AllowCredentials()
+    .WithOrigins("https://localhost:4200"));
 
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<PresenceHub>("hubs/presence");
+app.MapHub<MessageHub>("hubs/message");
 
 // Set up database seeding
 using var scope = app.Services.CreateScope();
