@@ -12,7 +12,10 @@ public class DatingDbContext : IdentityDbContext<AppUser, AppRole, int,
   IdentityUserClaim<int>, AppUserRole, IdentityUserLogin<int>,
   IdentityRoleClaim<int>, IdentityUserToken<int>>
 {
-  public DatingDbContext(DbContextOptions options) : base(options) { }
+  public DatingDbContext(DbContextOptions options) : base(options)
+  {
+    AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+  }
 
   public DbSet<Connection> Connections { get; set; }
   public DbSet<Group> Groups { get; set; }

@@ -15,7 +15,7 @@ public static class ApplicationServiceExtensions
 
     services.AddDbContext<DatingDbContext>(options =>
     {
-      options.UseSqlServer(config.GetConnectionString("DefaultConnection"));
+      options.UseNpgsql(config.GetConnectionString("DefaultConnection"));
     });
 
     services.AddScoped<LogUserActivity>();
